@@ -40,6 +40,13 @@ const quizQuestions = [
     { question: "Is Apoorva happy?", answers: ["Yes", "No"], correct: 0 }
 ];
 
+// Loads images/<name>; if it is not there, tries <name> next to index.html
+function loadPhoto(img, name, hideOnFail) {
+    let n = 0;
+    img.addEventListener("error", () => { if (n++ === 0) img.src = name; else if (hideOnFail) img.remove(); });
+    img.src = "images/" + name;
+}
+
 // ==============================
 // SETUP (names, top bar, nav, particles)
 // ==============================
@@ -88,7 +95,8 @@ const mbtn = $("#music");
 if (page === "index") { store("bdMusic", "on"); store("bdTime", 0); }
 const savedTime = parseFloat(store("bdTime")) || 0;
 audio.addEventListener("loadedmetadata", () => { if (savedTime && savedTime < audio.duration) audio.currentTime = savedTime; });
-audio.addEventListener("error", () => {});
+let musicAlt = false; // if music/birthday.mp3 is missing, try birthday.mp3 next to index.html
+audio.addEventListener("error", () => { if (!musicAlt) { musicAlt = true; audio.src = "birthday.mp3"; if (store("bdMusic") === "on") playMusic(); } });
 function syncMusic() { const on = !audio.paused; mbtn.textContent = on ? "🔊" : "🎵"; mbtn.setAttribute("aria-pressed", on); }
 function playMusic() { const p = audio.play(); if (p && p.then) p.then(syncMusic).catch(syncMusic); }
 mbtn.addEventListener("click", () => {
@@ -148,9 +156,9 @@ if (page === "gallery") {
         const b = document.createElement("button");
         b.className = "pol";
         b.setAttribute("aria-label", "Open photo: " + cap);
-        b.innerHTML = `<div class="im"><img src="images/${photoFiles[i]}" alt="${cap}" loading="lazy"></div><span class="cap">${cap}</span>`;
+        b.innerHTML = `<div class="im"><img alt="${cap}" loading="lazy"></div><span class="cap">${cap}</span>`;
         b.querySelector("img").style.objectPosition = photoFocus[i];
-        b.querySelector("img").addEventListener("error", e => e.target.remove());
+        loadPhoto(b.querySelector("img"), photoFiles[i], true);
         b.addEventListener("click", () => open(i, b));
         grid.append(b);
     });
@@ -164,6 +172,8 @@ if (page === "gallery") {
     const img = lb.querySelector("img"), cp = lb.querySelector("figcaption");
     function show(i) {
         cur = (i + photoCaptions.length) % photoCaptions.length;
+        img.dataset.n = "0";
+        img.onerror = () => { if (img.dataset.n === "0") { img.dataset.n = "1"; img.src = photoFiles[cur]; } };
         img.src = `images/${photoFiles[cur]}`;
         img.alt = photoCaptions[cur];
         cp.textContent = photoCaptions[cur];
@@ -279,7 +289,6 @@ if (page === "special") {
     gift.addEventListener("click", openGift);
     gift.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openGift(); } });
     $("#openGift").addEventListener("click", openGift);
-    fin.querySelector("img").src = "images/" + finalPhoto;
+    loadPhoto(fin.querySelector("img"), finalPhoto, true);
     fin.querySelector("img").style.objectPosition = photoFocus[Math.max(0, photoFiles.indexOf(finalPhoto))];
-    fin.querySelector("img").addEventListener("error", e => e.target.remove());
 }
